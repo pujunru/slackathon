@@ -3,10 +3,12 @@ from typing import Callable, NoReturn
 import slack_sdk
 from slack_bolt import App
 
-ListenerRegister = Callable[[App], NoReturn]
+from runtime import SlackBotRuntime
+
+ListenerRegister = Callable[[App, SlackBotRuntime], NoReturn]
 
 
-def listen_events(app: App):
+def listen_events(app: App, runtime: SlackBotRuntime):
     @app.event("team_join")
     def example_team_joined(event, say):
         user_id = event["user"]
@@ -14,14 +16,14 @@ def listen_events(app: App):
         say(text=text, channel="#general")
 
 
-def listen_messages(app: App):
+def listen_messages(app: App, runtime: SlackBotRuntime):
     @app.message(":wave:")
     def example_wave_back(message, say):
         user = message['user']
         say(text=f"Hola, <@{user}>!")
 
 
-def listen_commands(app: App):
+def listen_commands(app: App, runtime: SlackBotRuntime):
     @app.command("/come")
     def example_come(ack, client: slack_sdk.web.client.WebClient, command, body, say, logger):
         ack()
