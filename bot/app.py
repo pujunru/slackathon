@@ -4,11 +4,9 @@ import os
 from typing import Optional
 
 from peewee import Database
-from flask import Flask, request
 from slack_bolt import App as SlackBoltApp
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
-from slack_bolt.adapter.flask import SlackRequestHandler
 
 from config import SlackBotConfig
 from db.database import conn_sqlite_database, conn_mysql_database
@@ -76,6 +74,9 @@ class SlackBotApp:
             self._socket_mode_handler = SocketModeHandler(self.bolt_app, self.config.slack_app_token)
             self._socket_mode_handler.start()
         else:
+            from flask import Flask, request
+            from slack_bolt.adapter.flask import SlackRequestHandler
+
             flask_app = Flask(__name__)
             handler = SlackRequestHandler(self.bolt_app)
 
@@ -85,18 +86,18 @@ class SlackBotApp:
 
             @flask_app.after_request
             def after(response):
-                print(response.status)
-                print(response.headers)
-                print(response.get_data())
+                logging.debug(response.status)
+                logging.debug(response.headers)
+                logging.debug(response.get_data())
                 return response
 
             @flask_app.before_request
             def before():
-                print(request.headers)
-                print(request.get_data())
+                logging.debug(request.headers)
+                logging.debug(request.get_data())
                 pass
 
-            print("Starting slack bot app within flask...")
+            logging.debug("Starting slack bot app within flask...")
             # Run `ngrok http 3000` to establish a tunnel
             flask_app.run(debug=True, port=3000)
 
@@ -106,8 +107,8 @@ class SlackBotApp:
         self.db.close()
 
     def start_lambda(self, event, context):
-        self._lambda_mode_handler = SlackRequestHandler(self.bolt_app)
-        self._lambda_mode_handler.handle(event, context)
+        lambda_mode_handler = SlackRequestHandler(self.bolt_app)
+        return lambda_mode_handler.handle(event, context)
 
 
 def lambda_handler(event, context):
@@ -126,7 +127,7 @@ def lambda_handler(event, context):
 
     app = SlackBotApp(config=app_config, bolt_app=bolt_app)
     logging.info("Starting slack bot app with lambda...")
-    app.start_lambda(event, context)
+    return app.start_lambda(event, context)
 
 
 if __name__ == '__main__':

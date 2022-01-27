@@ -1,4 +1,2 @@
 slack_bolt
 peewee
-flask
-boto3
