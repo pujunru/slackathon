@@ -1,11 +1,14 @@
 import atexit
+import logging
 import os
 from typing import Optional
 
 from peewee import Database
+from flask import Flask, request
 from slack_bolt import App as SlackBoltApp
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_bolt.adapter.aws_lambda import SlackRequestHandler
+from slack_bolt.adapter.flask import SlackRequestHandler
 
 from config import SlackBotConfig
 from db.database import conn_sqlite_database, conn_mysql_database
@@ -13,6 +16,8 @@ from db.utils import init_db_if_not
 from middlewares import MiddlewareRegister, global_middlewares
 from listeners import ListenerRegister, listen_events, listen_commands, listen_messages
 from runtime import SlackBotRuntime
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class SlackBotApp:
@@ -66,12 +71,34 @@ class SlackBotApp:
         raise NotImplementedError("Database Initialization not yet implemented!")
 
     # Start/Close mode for server-ful modes, e.g. local WS based testing
-    def start(self, socket_mode=True):
+    def start(self, socket_mode=False):
         if socket_mode:
             self._socket_mode_handler = SocketModeHandler(self.bolt_app, self.config.slack_app_token)
             self._socket_mode_handler.start()
         else:
-            raise NotImplementedError("SlackBotApp modes other than websocket not yet implemented")
+            flask_app = Flask(__name__)
+            handler = SlackRequestHandler(self.bolt_app)
+
+            @flask_app.route("/slack/events", methods=["POST"])
+            def slack_events():
+                return handler.handle(request)
+
+            @flask_app.after_request
+            def after(response):
+                print(response.status)
+                print(response.headers)
+                print(response.get_data())
+                return response
+
+            @flask_app.before_request
+            def before():
+                print(request.headers)
+                print(request.get_data())
+                pass
+
+            print("Starting slack bot app within flask...")
+            # Run `ngrok http 3000` to establish a tunnel
+            flask_app.run(debug=True, port=3000)
 
     def close(self):
         if self._socket_mode_handler:
@@ -84,7 +111,7 @@ class SlackBotApp:
 
 
 def lambda_handler(event, context):
-    _app_config = SlackBotConfig(
+    app_config = SlackBotConfig(
         slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
         slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
         db_name=os.environ.get("DB_NAME"),
@@ -92,10 +119,27 @@ def lambda_handler(event, context):
         db_username=os.environ.get("DB_USERNAME"),
         db_password=os.environ.get("DB_PASSWORD"),
     )
+    bolt_app = SlackBoltApp(
+        token=app_config.slack_bot_token,
+        process_before_response=True,
+    )
+
+    app = SlackBotApp(config=app_config, bolt_app=bolt_app)
+    logging.info("Starting slack bot app with lambda...")
+    app.start_lambda(event, context)
+
+
+if __name__ == '__main__':
+    _app_config = SlackBotConfig(
+        slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
+        slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
+    )
+
     _bolt_app = SlackBoltApp(
         token=_app_config.slack_bot_token,
         process_before_response=True,
     )
-
     _app = SlackBotApp(config=_app_config, bolt_app=_bolt_app)
-    _app.start_lambda(event, context)
+    _app.start(socket_mode=False)
+
+    atexit.register(_app.close)

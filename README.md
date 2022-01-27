@@ -1,3 +1,4 @@
+[![Pipeline](https://github.com/pujunru/slackathon/actions/workflows/pipeline.yaml/badge.svg?branch=main)](https://github.com/pujunru/slackathon/actions/workflows/pipeline.yaml)
 # Slackathon
 
 ## Setup
