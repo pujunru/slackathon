@@ -9,6 +9,11 @@ ListenerRegister = Callable[[App, SlackBotRuntime], NoReturn]
 
 
 def listen_events(app: App, runtime: SlackBotRuntime):
+    @app.event("url_verification")
+    def endpoint_url_validation(event, say):
+        pong_msg = event["challenge"]
+        say(pong_msg)
+
     @app.event("team_join")
     def example_team_joined(event, say):
         user_id = event["user"]
