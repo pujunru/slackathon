@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  github-actions-with-aws-sam
+
+  Sample SAM Template for github-actions-with-aws-sam
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+
+Parameters:
+  SlackBotToken:
+    Description: 'Required, SlackBotToken'
+    Type: 'String'
+  SlackSigningSecret:
+    Description: 'Required, SlackSigningSecret'
+    Type: 'String'
+  DbName:
+    Description: 'Required, DB_NAME'
+    Type: 'String'
+  DbHostname:
+    Description: 'Required, DB_HOSTNAME'
+    Type: 'String'
+  DbUsername:
+    Description: 'Required, DB_USERNAME'
+    Type: 'String'
+  DbPassword:
+    Description: 'Required, DB_PASSWORD'
+    Type: 'String'
+
+Resources:
+  SlackBotAppFunc:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata:
+      SamResourceId: SlackBotAppFunction
+    Properties:
+      CodeUri: bot/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Environment:
+        Variables:
+          SLACK_BOT_TOKEN: !Ref SlackBotToken
+          SLACK_SIGNING_SECRET: !Ref SlackSigningSecret
+          DB_NAME: !Ref DbName
+          DB_HOSTNAME: !Ref DbHostname
+          DB_USERNAME: !Ref DbUsername
+          DB_PASSWORD: !Ref DbPassword
+      Events:
+        Slack:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /slack/events
+            Method: post
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  SlackBotAppApi:
+    Description: "API Gateway endpoint URL for Prod stage for SlackBotApp"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  SlackBotAppFunction:
+    Description: "SlackBotApp Lambda Function ARN"
+    Value: !GetAtt SlackBotAppFunc.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt SlackBotAppFuncRole.Arn
