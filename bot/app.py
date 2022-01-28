@@ -12,7 +12,8 @@ from config import SlackBotConfig
 from db.database import conn_sqlite_database, conn_mysql_database
 from db.utils import init_db_if_not
 from middlewares import MiddlewareRegister, global_middlewares
-from listeners import ListenerRegister, listen_events, listen_commands, listen_messages
+from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, \
+    listen_shortcuts
 from runtime import SlackBotRuntime
 
 logging.basicConfig(level=logging.DEBUG)
@@ -48,6 +49,8 @@ class SlackBotApp:
             listen_events,
             listen_commands,
             listen_messages,
+            listen_actions,
+            listen_shortcuts,
         )
 
     # Global registration of listeners for each event type/business category
@@ -82,6 +85,10 @@ class SlackBotApp:
 
             @flask_app.route("/slack/events", methods=["POST"])
             def slack_events():
+                return handler.handle(request)
+
+            @flask_app.route("/slack/interactive-endpoint", methods=["POST"])
+            def slack_interactive():
                 return handler.handle(request)
 
             @flask_app.after_request

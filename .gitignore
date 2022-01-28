@@ -5,6 +5,7 @@ package/
 *.zip
 # local lambda debug
 package/vars.json
+.env
 .aws-sam/
 
 # Byte-compiled / optimized / DLL files

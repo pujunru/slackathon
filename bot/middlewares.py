@@ -11,7 +11,6 @@ def global_middlewares(app: App):
         return next()
 
     @app.error
-    def global_err_handler(error, body, logger, next):
+    def global_err_handler(error, body, logger):
         logger.exception(f"Error: {error}")
         logger.info(f"Request body: {body}")
-        return next()
