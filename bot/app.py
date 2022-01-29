@@ -10,7 +10,7 @@ from config import SlackBotConfig
 from db.database import new_sqlite_database
 from db.utils import init_db_if_not
 from middlewares import MiddlewareRegister, global_middlewares
-from listeners import ListenerRegister, listen_events, listen_commands, listen_messages
+from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, listen_views
 
 
 class SlackBotApp:
@@ -37,12 +37,14 @@ class SlackBotApp:
             listen_events,
             listen_commands,
             listen_messages,
+            listen_actions,
+            listen_views
         )
 
     # Global registration of listeners for each event type/business category
     def register_listeners(self, *listener_register: ListenerRegister):
         for register in listener_register:
-            register(self.bolt_app)
+            register(self.bolt_app, self.db)
 
     def register_middlewares(self, *middleware_register: MiddlewareRegister):
         for register in middleware_register:
@@ -71,8 +73,10 @@ class SlackBotApp:
 # Start your app
 if __name__ == "__main__":
     _app_config = SlackBotConfig(
-        slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
-        slack_app_token=os.environ.get("SLACK_APP_TOKEN"),
+        # slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
+        slack_bot_token="xoxb-2988501631525-3024827153457-VJaaPBMI5c5tLYsWp7KtPhBg",
+        # slack_app_token=os.environ.get("SLACK_APP_TOKEN"),
+        slack_app_token="xapp-1-A030Q8QHSCR-3035935418416-11bc253051d4dda96d0c33817792c67bc0214972a204893da568e146740553ac",
         debug=True,  # Turning on debug now
         db_name=":memory:",  # Use memory for now
     )

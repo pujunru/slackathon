@@ -1,4 +1,4 @@
-from peewee import Model, CharField, PrimaryKeyField, BooleanField, IntegerField, DateTimeField
+from peewee import Model, CharField, PrimaryKeyField, BooleanField, IntegerField, DateTimeField, ForeignKeyField
 
 from db.database import database_runtime
 
@@ -15,11 +15,17 @@ class User(BaseModel):
 
 
 class UserProfile(BaseModel):
-    pass
+    user = ForeignKeyField(User)
+    timezone = IntegerField
+
+
+class WeekDays(BaseModel):
+    user = ForeignKeyField(User)
+    day = IntegerField
 
 
 class TimeSlot(BaseModel):
-    user = User
+    user = ForeignKeyField(User)
     start = DateTimeField
     end = DateTimeField
     label = CharField
