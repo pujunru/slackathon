@@ -19,7 +19,7 @@ python bot/app.py
 which will start a flask server on port 3000 and forwarding Slack traffic to the slack handlers.
 
 
-###Start ngrok tunnel
+### Start ngrok tunnel
 ```bash
 ngrok http 3000
 ```
