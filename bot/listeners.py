@@ -8,9 +8,18 @@ from models import set_personal_profiles_model, home_model
 from db.utils import create_user
 
 ListenerRegister = Callable[[App, Database], NoReturn]
+from runtime import SlackBotRuntime
+
+ListenerRegister = Callable[[App, SlackBotRuntime], NoReturn]
 
 
 def listen_events(app: App, db: Database):
+def listen_events(app: App, runtime: SlackBotRuntime):
+    @app.event("url_verification")
+    def endpoint_url_validation(event, say):
+        pong_msg = event["challenge"]
+        say(pong_msg)
+
     @app.event("team_join")
     def example_team_joined(event, say):
         user_id = event["user"]
@@ -35,6 +44,7 @@ def listen_events(app: App, db: Database):
 
 
 def listen_messages(app: App, db: Database):
+def listen_messages(app: App, runtime: SlackBotRuntime):
     @app.message(":wave:")
     def example_wave_back(message, say):
         user = message['user']
@@ -46,6 +56,7 @@ def listen_messages(app: App, db: Database):
 
 
 def listen_commands(app: App, db: Database):
+def listen_commands(app: App, runtime: SlackBotRuntime):
     @app.command("/come")
     def example_come(ack, client: slack_sdk.web.client.WebClient, command, body, say, logger):
         ack()

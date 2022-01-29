@@ -1,6 +1,11 @@
 # Misc.
 ## bolt framework examples
 bolt-python/
+package/
+*.zip
+# local lambda debug
+package/vars.json
+.aws-sam/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
