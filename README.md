@@ -24,5 +24,5 @@ which will start a flask server on port 3000 and forwarding Slack traffic to the
 ngrok http 3000
 ```
 Then configure Slack app with the ngrok https endpoint:
-![](doc/assets/Screen Shot 2022-01-28 at 12.54.16 PM.png)
-![](doc/assets/Screen Shot 2022-01-28 at 12.55.39 PM.png)
+![](docs/assets/slack_setting_update_1.png)
+![](docs/assets/slack_setting_update_2.png)
