@@ -12,7 +12,7 @@ from config import SlackBotConfig
 from db.database import conn_sqlite_database, conn_mysql_database
 from db.utils import init_db_if_not
 from middlewares import MiddlewareRegister, global_middlewares
-from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, listen_views
+from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, listen_views, listen_shortcuts
 from runtime import SlackBotRuntime
 
 logging.basicConfig(level=logging.DEBUG)
@@ -49,6 +49,7 @@ class SlackBotApp:
             listen_commands,
             listen_messages,
             listen_actions,
+            listen_shortcuts,
             listen_views
         )
 
@@ -86,6 +87,10 @@ class SlackBotApp:
             def slack_events():
                 return handler.handle(request)
 
+            @flask_app.route("/slack/interactive-endpoint", methods=["POST"])
+            def slack_interactive():
+                return handler.handle(request)
+
             @flask_app.after_request
             def after(response):
                 logging.debug(response.status)
@@ -108,16 +113,36 @@ class SlackBotApp:
             self._socket_mode_handler.close()
         self.db.close()
 
+    def start_lambda(self, event, context):
+        lambda_mode_handler = SlackRequestHandler(self.bolt_app)
+        return lambda_mode_handler.handle(event, context)
+
+
+def lambda_handler(event, context):
+    app_config = SlackBotConfig(
+        slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
+        slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
+        db_name=os.environ.get("DB_NAME"),
+        db_hostname=os.environ.get("DB_HOSTNAME"),
+        db_username=os.environ.get("DB_USERNAME"),
+        db_password=os.environ.get("DB_PASSWORD"),
+    )
+    bolt_app = SlackBoltApp(
+        token=app_config.slack_bot_token,
+        process_before_response=True,
+    )
+
+    app = SlackBotApp(config=app_config, bolt_app=bolt_app)
+    logging.info("Starting slack bot app with lambda...")
+    return app.start_lambda(event, context)
 
 
 if __name__ == '__main__':
     _app_config = SlackBotConfig(
         # slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
         slack_bot_token="xoxb-2988501631525-3024827153457-VJaaPBMI5c5tLYsWp7KtPhBg",
-        # slack_app_token=os.environ.get("SLACK_APP_TOKEN"),
         slack_app_token="xapp-1-A030Q8QHSCR-3035935418416-11bc253051d4dda96d0c33817792c67bc0214972a204893da568e146740553ac",
-        debug=True,  # Turning on debug now
-        db_name=":memory:",  # Use memory for now
+        slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
     )
 
     _bolt_app = SlackBoltApp(
@@ -125,6 +150,6 @@ if __name__ == '__main__':
         process_before_response=True,
     )
     _app = SlackBotApp(config=_app_config, bolt_app=_bolt_app)
-    _app.start()
+    _app.start(socket_mode=False)
 
     atexit.register(_app.close)
