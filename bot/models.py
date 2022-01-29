@@ -48,6 +48,12 @@ def inputs(id, element, label):
     }
 
 
+def actions(elements):
+    return {
+        "type": "actions",
+        "elements": elements
+    }
+
 def select_time():
     return {
         "type": "timepicker",
@@ -86,7 +92,7 @@ def context(t):
 def date_picker():
     return {
         "type": "datepicker",
-        "initial_date": "1990-04-28",
+        "initial_date": "2022-01-31",
         "placeholder": {
             "type": "plain_text",
             "text": "Select a date",
@@ -96,7 +102,27 @@ def date_picker():
     }
 
 
-def set_personal_profiles_model():
+def select_users():
+    return {
+        "type": "multi_users_select",
+        "placeholder": {
+            "type": "plain_text",
+            "text": "Select users",
+            "emoji": True
+        },
+        "action_id": "multi_users_select-action"
+    }
+
+
+def radio_button(options):
+    return {
+        "type": "radio_buttons",
+        "options": options,
+        "action_id": "radio_buttons-action"
+    }
+
+
+def set_personal_profiles_modal():
     week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     timezones = [f"UTC{i}" for i in range(-12, 0)] + ["UTC"] + [f"UTC+{i}" for i in range(1, 13)]
     return {
@@ -118,7 +144,55 @@ def set_personal_profiles_model():
     }
 
 
-def home_model():
+def plain_text_input():
+    return {
+        "type": "plain_text_input",
+        "action_id": "plain_text_input-action"
+    }
+
+
+def create_meeting_modal(organizer, picked_times, default="Suggest a time"):
+    importance = ["High", "Middle", "Low"]
+    return {
+        "type": "modal",
+        "callback_id": "create_meeting",
+        "title": text("Create a meeting"),
+        "submit": text(default),
+        "close": text("Cancel"),
+        "blocks": [
+            context("Arrange a meeting between members."),
+            {
+                "type": "divider"
+            },
+            inputs("title", plain_text_input(), "Title"),
+            inputs("date", date_picker(), "Date"),
+            inputs("select_users", select_users(), "Participants"),
+            inputs("meeting_time", static_select(options=[option(picked_times[i], picked_times[i]) for i in range(len(picked_times))]), "Meeting time"),
+            inputs("priority", radio_button(options=[option(importance[i], str(i)) for i in range(3)]), "Priority"),
+            context(f"Organized by @{organizer}")
+        ]
+    }
+
+
+def update_availability_modal():
+    week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    return {
+        "type": "modal",
+        "callback_id": "update_availability",
+        "title": text("Update your availability"),
+        "submit": text("Update"),
+        "close": text("Cancel"),
+        "blocks": [
+            {
+                "type": "divider"
+            },
+            inputs("working_days", checkbox(options=[option(week[i], str(i)) for i in range(7)]), "Working Days"),
+
+        ]
+    }
+
+
+def home_modal():
     return {
         "type": "home",
         "blocks": [
@@ -132,13 +206,10 @@ def home_model():
             {
                 "type": "divider"
             },
-            {
-                "type": "actions",
-                "elements": [
-                    button(t="Set Personal Profile", action_id="set_personal_profiles", value="set_personal_profiles"),
-                    button(t="Update Availability", action_id="update_availability", value="update_availability"),
-                    button(t="New Meeting", action_id="new_meeting", value="new_meeting"),
-                ]
-            },
+            actions(elements=[
+                button(t="Set Personal Profile", action_id="set_personal_profiles", value="set_personal_profiles"),
+                button(t="Update Availability", action_id="update_availability", value="update_availability"),
+                button(t="New Meeting", action_id="new_meeting", value="new_meeting"),
+            ])
         ]
     }

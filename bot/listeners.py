@@ -4,16 +4,13 @@ import slack_sdk
 from slack_bolt import App
 from slack_sdk.errors import SlackApiError
 from peewee import Database
-from models import set_personal_profiles_model, home_model
+from models import set_personal_profiles_modal, home_modal, create_meeting_modal, update_availability_modal
 from db.utils import create_user
-
-ListenerRegister = Callable[[App, Database], NoReturn]
 from runtime import SlackBotRuntime
 
 ListenerRegister = Callable[[App, SlackBotRuntime], NoReturn]
 
 
-def listen_events(app: App, db: Database):
 def listen_events(app: App, runtime: SlackBotRuntime):
     @app.event("url_verification")
     def endpoint_url_validation(event, say):
@@ -29,7 +26,7 @@ def listen_events(app: App, runtime: SlackBotRuntime):
     @app.event("app_home_opened")
     def home_opened(event, client, logger):
         user_id = event["user"]
-        home_view = home_model()
+        home_view = home_modal()
 
         try:
             # Call the views.publish method using the WebClient passed to listeners
@@ -43,7 +40,6 @@ def listen_events(app: App, runtime: SlackBotRuntime):
             logger.error("Error fetching home page")
 
 
-def listen_messages(app: App, db: Database):
 def listen_messages(app: App, runtime: SlackBotRuntime):
     @app.message(":wave:")
     def example_wave_back(message, say):
@@ -55,7 +51,6 @@ def listen_messages(app: App, runtime: SlackBotRuntime):
         say("_Who's there?_")
 
 
-def listen_commands(app: App, db: Database):
 def listen_commands(app: App, runtime: SlackBotRuntime):
     @app.command("/come")
     def example_come(ack, client: slack_sdk.web.client.WebClient, command, body, say, logger):
@@ -68,13 +63,29 @@ def listen_commands(app: App, runtime: SlackBotRuntime):
         # say(text=f"What's up?", channel=channel_id)
 
 
-def listen_actions(app: App, db: Database):
+def listen_actions(app: App, runtime: SlackBotRuntime):
     @app.action("set_personal_profiles")
     def set_personal_profiles(ack, action, body, client, logger):
         ack()
         print(body)
         if body["type"] == "block_actions":
-            view = set_personal_profiles_model()
+            view = set_personal_profiles_modal()
+            try:
+                result = client.views_open(
+                    trigger_id=body["trigger_id"],
+                    view=view
+                )
+                logger.info(result)
+
+            except SlackApiError as e:
+                logger.error("Error setting profile: {}".format(e))
+
+    @app.action("update_availability")
+    def update_availability(ack, action, body, client, logger):
+        ack()
+        print(body)
+        if body["type"] == "block_actions":
+            view = update_availability_modal()
             try:
                 result = client.views_open(
                     trigger_id=body["trigger_id"],
@@ -86,7 +97,38 @@ def listen_actions(app: App, db: Database):
                 logger.error("Error setting profile: {}".format(e))
 
 
-def listen_views(app: App, db: Database):
+
+    @app.action("new_meeting")
+    def new_meeting(ack, action, body, client, logger):
+        ack()
+        view = create_meeting_modal(body["user"]["username"], [" "])
+        try:
+            result = client.views_open(
+                trigger_id=body["trigger_id"],
+                view=view
+            )
+            logger.info(result)
+
+        except SlackApiError as e:
+            logger.error("Error setting profile: {}".format(e))
+
+
+    # TODO: view_update for add_time, view_update for erase time, view, db parts for meeting and update_avail
+    @app.action("test")
+    def test(ack, action, body, client, logger):
+        ack(response_action="update", view=create_meeting_modal(body["user"]["username"], [" "], "Create"))
+        # view = create_meeting_modal(body["user"]["username"], [" "])
+        # try:
+        #     result = client.views_open(
+        #         trigger_id=body["trigger_id"],
+        #         view=view
+        #     )
+        #     logger.info(result)
+        #
+        # except SlackApiError as e:
+        #     logger.error("Error setting profile: {}".format(e))
+
+def listen_views(app: App, runtime: SlackBotRuntime):
     @app.view("personal_profile")
     def personal_profile(ack, body, client, view, logger):
         print(body)
@@ -106,41 +148,24 @@ def listen_views(app: App, db: Database):
         ack()
 
         user = body["user"]["id"]
-        return create_user(db, user, working_hours_start, working_hours_end, work_days, timezone, logger)
+        return create_user(runtime.db, user, working_hours_start, working_hours_end, work_days, timezone, logger)
 
+    @app.view("create_meeting")
+    def personal_profile(ack, body, client, view, logger):
+        print(view["state"]["values"])
+        values = view["state"]["values"]
+        update = values["meeting_time"]["static_select-action"]["selected_option"]["value"] == " "
+        date = values["date"]["datepicker-action"]["selected_date"]
+        selected_users = values["select_users"]["multi_users_select-action"]["selected_users"]
+        print(date, selected_users)
+        # TODO: find out the time based on date and selected users
+        picked_times = ["15:00"]
+        if update:
+            ack(response_action="update", view=create_meeting_modal(body["user"]["username"], picked_times, "Create"))
+        else:
+            ack()
+            # TODO: save meeting to db
 
-
-    # @app.action("new_meeting")
-    # def new_meeting(ack, action, body, client, logger):
-    #     ack()
-    #     print(action)
-    #     priority = ["High", "Middle", "Low"]
-    #     meeting = {
-    #         "type": "modal",
-    #         "title": text("Create meeting"),
-    #         "submit": text("Create"),
-    #         "close": text("Cancel"),
-    #         "blocks": [
-    #             {
-    #                 "type": "divider"
-    #             },
-    #             inputs(select_time(), "Working Hours"),
-    #             inputs(select_time(), "-"),
-    #             inputs(checkbox(options=[option(priority[i], i) for i in range(3)]), "Meeting Priority"),
-    #             context("\nYou can always update your profile later.")
-    #         ]
-    #     }
-    #
-    #     try:
-    #         result = client.views_update(
-    #             view_id=body["view"]["id"],
-    #             hash=body["view"]["hash"],
-    #             view=meeting
-    #         )
-    #         logger.info(result)
-    #
-    #     except SlackApiError as e:
-    #         logger.error("Error setting profile: {}".format(e))
 
 # Listens to incoming messages that contain "hello"
 # To learn available listener arguments,

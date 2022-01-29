@@ -1,5 +1,6 @@
 from peewee import Database, IntegrityError
 from db.models import User, UserProfile, WeekDays, TimeSlot
+from db.database import use_database
 
 
 def init_db_if_not(db: Database):

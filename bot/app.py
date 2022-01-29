@@ -13,7 +13,6 @@ from db.database import conn_sqlite_database, conn_mysql_database
 from db.utils import init_db_if_not
 from middlewares import MiddlewareRegister, global_middlewares
 from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, listen_views
-from listeners import ListenerRegister, listen_events, listen_commands, listen_messages
 from runtime import SlackBotRuntime
 
 logging.basicConfig(level=logging.DEBUG)
@@ -56,7 +55,6 @@ class SlackBotApp:
     # Global registration of listeners for each event type/business category
     def register_listeners(self, *listener_register: ListenerRegister):
         for register in listener_register:
-            register(self.bolt_app, self.db)
             register(self.bolt_app, self._runtime)
 
     def register_middlewares(self, *middleware_register: MiddlewareRegister):
@@ -73,7 +71,7 @@ class SlackBotApp:
         raise NotImplementedError("Database Initialization not yet implemented!")
 
     # Start/Close mode for server-ful modes, e.g. local WS based testing
-    def start(self, socket_mode=False):
+    def start(self, socket_mode=True):
         if socket_mode:
             self._socket_mode_handler = SocketModeHandler(self.bolt_app, self.config.slack_app_token)
             self._socket_mode_handler.start()
