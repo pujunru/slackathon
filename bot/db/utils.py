@@ -21,8 +21,19 @@ def create_user(db: Database, user, start_time, end_time, weekdays, timezone, lo
             for weekday in weekdays:
                 WeekDays.create(user=user, day=int(weekday))
             TimeSlot.create(user=user, start=start_time, end=end_time, label="A")
-            print("ss")
         return
 
     except IntegrityError:
         logger.error("User already existed.")
+
+
+# def insert_available(db:Database, user, start_time, end_time, weekdays):
+#     try:
+#         with db.atomic():
+#             # Attempt to create the user. If the username is taken, due to the
+#             # unique constraint, the database will raise an IntegrityError.
+#
+#         return
+#
+#     except IntegrityError:
+#         logger.error("User already existed.")

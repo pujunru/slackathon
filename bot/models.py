@@ -71,12 +71,13 @@ def checkbox(options):
     }
 
 
-def static_select(options):
+def static_select(name, options):
     return {
         "type": "static_select",
+        # "object_id": name,
         "placeholder": text("Select an item"),
         "options": options,
-        "action_id": "static_select-action"
+        "action_id": name
     }
 
 
@@ -122,26 +123,113 @@ def radio_button(options):
     }
 
 
-def set_personal_profiles_modal():
+def action_time(index):
+    # availability = ["available", "tentative", "unavailable"]
+    # return [
+    # inputs(f"{index}.from", select_time(), "From"),
+    # inputs(f"{index}.to", select_time(), "To"),
+    # inputs(f"{index}.availability", static_select("availability", options=[option(availability[i], availability[i]) for i in range(3)]), "availability"),
+    # actions(elements=[button("X", f"{index}.X")])]
+    return {
+        "type": "actions",
+        "block_id": f"{index}",
+        "elements": [
+            {
+                "type": "timepicker",
+                "initial_time": "14:00",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "Select time",
+                    "emoji": True
+                },
+                "action_id": f"{index}.actionId-0"
+            },
+            {
+                "type": "timepicker",
+                "initial_time": "15:00",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "Select time",
+                    "emoji": True
+                },
+                "action_id": f"{index}.actionId-1"
+            },
+            {
+                "type": "static_select",
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": "Status",
+                    "emoji": True
+                },
+                "options": [
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Available",
+                            "emoji": True
+                        },
+                        "value": "Available"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Tentative",
+                            "emoji": True
+                        },
+                        "value": "Tentative"
+                    },
+                    {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Unavailable",
+                            "emoji": True
+                        },
+                        "value": "Unavailable"
+                    }
+                ],
+                "action_id": f"{index}.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "X",
+                    "emoji": True
+                },
+                "value": str(index),
+                "action_id": f"{index}.actionId-3"
+            }
+        ]
+    }
+
+
+def set_personal_profiles_modal(counter=1):
     week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     timezones = [f"UTC{i}" for i in range(-12, 0)] + ["UTC"] + [f"UTC+{i}" for i in range(1, 13)]
-    return {
+
+    result = {
         "type": "modal",
         "callback_id": "personal_profile",
-        "title": text("Set your profile"),
-        "submit": text("Create"),
+        "title": text("My availability"),
+        "submit": text("Submit"),
         "close": text("Cancel"),
         "blocks": [
             {
                 "type": "divider"
             },
+            inputs("timezone", static_select("timezone", options=[option(timezones[i], str(i)) for i in range(25)]), "Timezone"),
+            inputs("working_days", checkbox(options=[option(week[i], str(i)) for i in range(7)]), "Working Days"),
             inputs("working_hours_start", select_time(), "Working Hours"),
             inputs("working_hours_end", select_time(), "-"),
-            inputs("working_days", checkbox(options=[option(week[i], str(i)) for i in range(7)]), "Working Days"),
-            inputs("timezone", static_select(options=[option(timezones[i], str(i)) for i in range(25)]), "Timezone"),
-            context("\nYou can always update your profile later.")
+            context("Availability"),
+            context("From  -  To  -  Status")
         ]
     }
+    for i in range(counter):
+        result["blocks"].append(action_time(i))
+    result["blocks"].append(actions(elements=[
+        button(t="Add a time", action_id="add_available_time", value="add_available_time")]))
+    return result
 
 
 def plain_text_input():
@@ -167,7 +255,7 @@ def create_meeting_modal(organizer, picked_times, default="Suggest a time"):
             inputs("title", plain_text_input(), "Title"),
             inputs("date", date_picker(), "Date"),
             inputs("select_users", select_users(), "Participants"),
-            inputs("meeting_time", static_select(options=[option(picked_times[i], picked_times[i]) for i in range(len(picked_times))]), "Meeting time"),
+            inputs("meeting_time", static_select("meeting_time", options=[option(picked_times[i], picked_times[i]) for i in range(len(picked_times))]), "Meeting time"),
             inputs("priority", radio_button(options=[option(importance[i], str(i)) for i in range(3)]), "Priority"),
             context(f"Organized by @{organizer}")
         ]
@@ -193,8 +281,10 @@ def update_availability_modal():
 
 
 def home_modal():
+    timezones = [f"UTC{i}" for i in range(-12, 0)] + ["UTC"] + [f"UTC+{i}" for i in range(1, 13)]
     return {
         "type": "home",
+        "callback_id": "home",
         "blocks": [
             {
                 "type": "section",
@@ -206,10 +296,63 @@ def home_modal():
             {
                 "type": "divider"
             },
+
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " "
+                },
+                "accessory": button(t="Update my availability", action_id="set_personal_profiles", value="set_personal_profiles")
+            },
+            inputs("timezone", static_select("timezone_1", options=[option(timezones[i], str(i)) for i in range(25)]), "Timezone"),
             actions(elements=[
-                button(t="Set Personal Profile", action_id="set_personal_profiles", value="set_personal_profiles"),
-                button(t="Update Availability", action_id="update_availability", value="update_availability"),
-                button(t="New Meeting", action_id="new_meeting", value="new_meeting"),
+                {
+                    "type": "datepicker",
+                    "initial_date": "2022-01-31",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Select a date",
+                        "emoji": True
+                    },
+                    "action_id": "10.actionId-0"
+                },
+                {
+                    "type": "static_select",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Status",
+                        "emoji": True
+                    },
+                    "options": [
+                        {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Available",
+                                "emoji": True
+                            },
+                            "value": "Available"
+                        },
+                        {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Tentative",
+                                "emoji": True
+                            },
+                            "value": "Tentative"
+                        },
+                        {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Unavailable",
+                                "emoji": True
+                            },
+                            "value": "Unavailable"
+                        }
+                    ],
+                    "action_id": "9.actionId-2"
+                },
+                button("submit", "10.actionId-2", "submit")
             ])
         ]
     }

@@ -1,3 +1,7 @@
+"""
+timezone: UTC-12 - UTC+12 -> [0,24] in db
+WeekDays: Monday - Sunday -> [0, 6]
+"""
 from peewee import Model, CharField, PrimaryKeyField, BooleanField, IntegerField, DateTimeField, ForeignKeyField
 
 from db.database import database_runtime
