@@ -121,11 +121,8 @@ class SlackBotApp:
 
 def lambda_handler(event, context):
     app_config = SlackBotConfig(
-        slack_bot_token="xoxb-2988501631525-3024827153457-yRqdq7EgomAQEq78w1BTmEjw",
-        # slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
-        slack_app_token="xapp-1-A030Q8QHSCR-3021925164502-bdd5edfd0b15dfe930e33168a0d9fc179fa2656770ab0e23e0f4a3d6e4f1982c",
-        # slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
-        # slack_signing_secret="696034903cff587b75ea85b7bce62191",
+        slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
+        slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
         # db_name=os.environ.get("DB_NAME"),
         db_name="slackathon_staging",
         db_hostname="http://slackathon-app-db-prod.cacyqztjkxq5.us-west-1.rds.amazonaws.com/",
@@ -147,12 +144,11 @@ def lambda_handler(event, context):
 
 if __name__ == '__main__':
     _app_config = SlackBotConfig(
-        # slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
-        # slack_bot_token="xoxb-2988501631525-3024827153457-VJaaPBMI5c5tLYsWp7KtPhBg",
-        slack_bot_token="xoxb-2988501631525-3024827153457-yRqdq7EgomAQEq78w1BTmEjw",
-        slack_app_token="xapp-1-A030Q8QHSCR-3021925164502-bdd5edfd0b15dfe930e33168a0d9fc179fa2656770ab0e23e0f4a3d6e4f1982c",
-        # slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
-        # slack_signing_secret="696034903cff587b75ea85b7bce62191"
+        slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
+
+
+        slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
+
     )
 
     _bolt_app = SlackBoltApp(
