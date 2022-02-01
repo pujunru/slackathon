@@ -1,4 +1,8 @@
-from peewee import Model, CharField, PrimaryKeyField, BooleanField, IntegerField, DateTimeField
+"""
+timezone: UTC-12 - UTC+12 -> [0,24] in db
+WeekDays: Monday - Sunday -> [0, 6]
+"""
+from peewee import Model, CharField, PrimaryKeyField, BooleanField, IntegerField, DateTimeField, ForeignKeyField
 
 from db.database import database_runtime
 
@@ -15,11 +19,17 @@ class User(BaseModel):
 
 
 class UserProfile(BaseModel):
-    pass
+    user = ForeignKeyField(User)
+    timezone = IntegerField
+
+
+class WeekDays(BaseModel):
+    user = ForeignKeyField(User)
+    day = IntegerField
 
 
 class TimeSlot(BaseModel):
-    user = User
+    user = ForeignKeyField(User)
     start = DateTimeField
     end = DateTimeField
     label = CharField
