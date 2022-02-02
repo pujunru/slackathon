@@ -12,8 +12,10 @@ from config import SlackBotConfig
 from db.database import conn_sqlite_database, conn_mysql_database
 from db.utils import init_db_if_not
 from middlewares import MiddlewareRegister, global_middlewares
-from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, \
-    listen_shortcuts
+
+from listeners import ListenerRegister, listen_events, listen_commands, listen_messages, listen_actions, listen_views, \
+    listen_user_flow, listen_shortcuts
+
 from runtime import SlackBotRuntime
 
 logging.basicConfig(level=logging.DEBUG)
@@ -35,7 +37,7 @@ class SlackBotApp:
             self.db: Database = conn_sqlite_database(config.db_name)
         else:
             self.db: Database = conn_mysql_database(config.db_url)
-        # self.init_database()
+        self.init_database()
 
         self._runtime = SlackBotRuntime(self.db)
 
@@ -50,6 +52,8 @@ class SlackBotApp:
             listen_commands,
             listen_messages,
             listen_actions,
+            listen_views,
+            listen_user_flow,
             listen_shortcuts,
         )
 
@@ -69,7 +73,7 @@ class SlackBotApp:
         init_db_if_not(self.db)
 
         # TODO: Init database schema when obsolete
-        raise NotImplementedError("Database Initialization not yet implemented!")
+        # raise NotImplementedError("Database Initialization not yet implemented!")
 
     # Start/Close mode for server-ful modes, e.g. local WS based testing
     def start(self, socket_mode=False):
@@ -138,6 +142,7 @@ def lambda_handler(event, context):
 
 
 if __name__ == '__main__':
+    logging.warning(msg=str(os.path.curdir))
     _app_config = SlackBotConfig(
         slack_bot_token=os.environ.get("SLACK_BOT_TOKEN"),
         slack_signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
@@ -151,3 +156,4 @@ if __name__ == '__main__':
     _app.start(socket_mode=False)
 
     atexit.register(_app.close)
+

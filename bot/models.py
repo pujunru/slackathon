@@ -1,7 +1,25 @@
-from typing import Union, Optional, Sequence
+import datetime
+from dataclasses import dataclass
+from typing import Union, Optional, Sequence, List
 
+from datetime import tzinfo
+
+from pytz import BaseTzInfo
 from slack_sdk.models.blocks import PlainTextObject, Block
 from slack_sdk.models.views import View
+
+from db.models import User
+
+
+@dataclass
+class TimeSlotInfo:
+    time_slot_id: str  # timeslot.primary_key in db
+    start_time: datetime.datetime  # In UTC
+    end_time: datetime.datetime   # In UTC
+    timezone: BaseTzInfo  # pytz supported timezone str
+    available_users: List[User]
+    tentative_users: List[User]
+    unavailable_users: List[User]
 
 
 class Modal(View):

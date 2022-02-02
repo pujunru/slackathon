@@ -1,88 +1,17 @@
 import datetime
-from typing import Union, Optional, Sequence, List
+from typing import List
 
-import colored
-from colour import Color
+import pytz
 from slack_sdk.models.attachments import BlockAttachment
 from slack_sdk.models.blocks import *
 from slack_sdk.models.messages.message import Message
 from slack_sdk.models.views import View
 
+from models import TimeSlotInfo
+from utils import utc_offset_to_common_timezone, tzname_to_abbr, tz_to_abbr
+from views.commons import Blocks
+
 PLACE_HOLDER_IMG = "https://cdn.pixabay.com/photo/2021/12/19/14/36/bird-6881277_1280.jpg"
-
-
-class Modal(View):
-    def __init__(self, title: Optional[Union[str, dict, PlainTextObject]],
-                 blocks: Optional[Sequence[Union[dict, Block]]], **kwargs):
-        super().__init__(
-            type="modal",
-            title=title,
-            blocks=blocks,
-            **kwargs
-        )
-
-
-# class MeetingParticipantSummaryView(Blocks):
-#     def __init__(self,
-#                  meeting_datatime: datetime.datetime,
-#                  project_name: str,
-#                  start_time: datetime.time,
-#                  end_time: datetime.time,
-#                  ):
-#         super().__init__()
-#         self.append_block(
-#             ContextBlock(elements=[
-#                 MarkdownTextObject(text=meeting_datatime.strftime(""))
-#             ])
-#         )
-#         self.append_block(
-#             ContextBlock(elements=[
-#                 ImageElement(image_url="", alt_text=""),
-#                 MarkdownTextObject(text=f"Team check-in for project {project_name}"),
-#             ])
-#         )
-#         self.append_block(
-#             ContextBlock(elements=[
-#                 PlainTextObject(text=f"{start_time.strftime('')} - {end_time.strftime('')}(PST)"),  # TODO: TIMEZONE!
-#             ])
-#         )
-
-
-class TestMessage(Message):
-    def __init__(self, *, text: str):
-        super().__init__(text=text)
-
-
-class Blocks:
-    def __init__(self, blocks: List[Block]):
-        self.blocks = blocks
-
-    def __iter__(self):
-        return iter(self.blocks)
-
-
-class MeetingParticipantSummaryView(Blocks):
-    # Note assumes start_datatime and end_datetime have the timezone set and are equivalent
-    def __init__(self, *,
-                 project_name: str,
-                 start_datetime: datetime.datetime,
-                 end_datetime: datetime.datetime):
-        super().__init__([
-            ContextBlock(elements=[
-                MarkdownTextObject(text=start_datetime.strftime("%A, %B %-m, %Y"))
-            ]),
-            ContextBlock(elements=[
-                ImageElement(
-                    image_url=PLACE_HOLDER_IMG,
-                    alt_text="fi"),
-                MarkdownTextObject(text=f"Team check-in for project {project_name}"),
-            ]),
-            ContextBlock(elements=[
-                PlainTextObject(
-                    text=f"{start_datetime.time().strftime('%-I:%M%p')} - {end_datetime.time().strftime('%-I:%M%p')}"
-                         f" ({start_datetime.tzname()})"),
-            ]),
-        ])
 
 
 class MeetingParticipantActionView(Blocks):
@@ -185,6 +114,30 @@ class MeetingParticipantActionView(Blocks):
         super().__init__(section)
 
 
+class MeetingParticipantSummaryView(Blocks):
+    # Note assumes start_datatime and end_datetime have the timezone set and are equivalent
+    def __init__(self, *,
+                 project_name: str,
+                 start_datetime: datetime.datetime,
+                 end_datetime: datetime.datetime):
+        super().__init__([
+            ContextBlock(elements=[
+                MarkdownTextObject(text=start_datetime.strftime("%A, %B %-m, %Y"))
+            ]),
+            ContextBlock(elements=[
+                ImageElement(
+                    image_url=PLACE_HOLDER_IMG,
+                    alt_text="fi"),
+                MarkdownTextObject(text=f"Team check-in for project {project_name}"),
+            ]),
+            ContextBlock(elements=[
+                PlainTextObject(
+                    text=f"{start_datetime.time().strftime('%-I:%M%p')} - {end_datetime.time().strftime('%-I:%M%p')}"
+                         f" ({start_datetime.tzname()})"),
+            ]),
+        ])
+
+
 class MeetingParticipantView(Message):
     def __init__(self, *,
                  scheduler_uid: str,
@@ -219,29 +172,36 @@ class MeetingParticipantView(Message):
         )
 
 
-class CreateMeetingView(View):
+class CreateMeetingModal(View):
     def __init__(self, **kwargs):
         super().__init__(
             type="modal",
             title=PlainTextObject(text="Create Meeting"),
             close=PlainTextObject(text="Cancel"),
-            submit=PlainTextObject(text="Create"),
+            submit=PlainTextObject(text="Next"),
+            callback_id="meeting_create_meeting_submit",
             blocks=[
                 InputBlock(
                     label=PlainTextObject(text="Meeting Title"),
                     element=PlainTextInputElement(
+                        action_id="meeting_create_meeting_title",
                         placeholder=PlainTextObject(text="Enter Title"),
                     )
                 ),
                 InputBlock(
                     label=PlainTextObject(text="Select Channel to Create Meeting In"),
-                    element=ChannelSelectElement(
+                    element=ConversationMultiSelectElement(
+                        action_id="meeting_create_meeting_participants",
                         placeholder=PlainTextObject(text="Channel Name/User Name"),
                     )
+                ),
+                ContextBlock(
+                    elements=[PlainTextObject(text="Or type names to create a new channel")]
                 ),
                 SectionBlock(
                     text=PlainTextObject(text="Duration"),
                     accessory=StaticSelectElement(
+                        action_id="meeting_create_meeting_duration",
                         options=[
                             Option(value="0.5h", text="30 Mins"),
                             Option(value="1h", text="1 Hour"),
@@ -254,29 +214,108 @@ class CreateMeetingView(View):
                 SectionBlock(
                     text=PlainTextObject(text="Frequency"),
                     accessory=StaticSelectElement(
+                        action_id="meeting_create_meeting_frequency",
                         options=[
                             Option(value="0", text="Never Repeat"),
-                        ]
-                    )
+                        ],
+                        initial_option=Option(value="0", text="Never Repeat"),
+                    ),
                 ),
-                SectionBlock(
-                    text=PlainTextObject(text="Earliest Date"),
-                    accessory=DatePickerElement(
-                        placeholder=PlainTextObject(text="Pick a date")
-                    )
+                InputBlock(
+                    label=PlainTextObject(text="Meeting Date"),
+                    element=DatePickerElement(
+                        action_id="meeting_create_meeting_date",
+                        placeholder=PlainTextObject(text="Pick a date"),
+                        initial_date=datetime.datetime.now().strftime("%Y-%m-%d"),
+                    ),
                 ),
-                SectionBlock(
-                    text=PlainTextObject(text="Latest Date"),
-                    accessory=DatePickerElement(
-                        placeholder=PlainTextObject(text="Pick a date")
-                    )
-                ),
+                # SectionBlock(
+                #     text=PlainTextObject(text="Latest Date"),
+                #     accessory=DatePickerElement(
+                #         placeholder=PlainTextObject(text="Pick a date")
+                #     )
+                # ),
                 InputBlock(
                     label=PlainTextObject(text="Agenda (Optional)"),
                     element=PlainTextInputElement(
+                        action_id="meeting_create_meeting_agenda",
                         placeholder=PlainTextObject(text="Type in agenda"),
                         multiline=True,
                     )
                 ),
+                SectionBlock(
+                    text=PlainTextObject(text="See"),
+                    accessory=ButtonElement(
+                        action_id="meeting_create_meeting_suggestion_push",
+                        text="Show me"
+                    )
+                ),
             ]
         )
+
+
+class CreateMeetingTimeSuggestionModal(View):
+    def __init__(self,
+                 time_slot_infos: List[TimeSlotInfo] = None):
+
+        blocks = [
+            SectionBlock(
+                text=MarkdownTextObject(text="*Suggested Time Slots*"),
+                accessory=RadioButtonsElement(
+                    action_id="meeting_create_meeting_time_suggestion_suggest_select",
+                    options=[
+                        Option(
+                            value=t.time_slot_id,
+                            description=MarkdownTextObject(
+                                text=f"Unavailable: {len(t.unavailable_users)} users",
+                            ),
+                            text=MarkdownTextObject(
+                                text=f"*{t.start_time.astimezone(t.timezone).strftime('%-I:%M%p')} - {t.end_time.astimezone(t.timezone).strftime('%-I:%M%p')} ({tz_to_abbr(t.timezone)})*\n"
+                                     f"Available: {len(t.available_users)} users \n"
+                                # f"{self.render_users_list(t.available_users)}\n"
+                                     f"Tentative: {len(t.tentative_users)} users \n"
+                                # f"{self.render_users_list(t.tentative_users)}\n"
+                                #      f"Unavailable: {len(t.unavailable_users)} users"
+                                # f"{self.render_users_list(t.unavailable_users)}\n"
+                            )
+                        )
+                        for t in time_slot_infos[: 2 if len(time_slot_infos) > 2 else len(time_slot_infos)]
+                    ]
+                )
+            ) if time_slot_infos else SectionBlock(text=MarkdownTextObject(
+                text="Oh oh, seems like there's no handy time we can suggest for you :disappointed:"
+            )),
+        ]
+
+        if len(time_slot_infos) > 2:
+            blocks.append(
+                InputBlock(
+                    optional=True,
+                    label=PlainTextObject(text="Or Choose Another Time Slot"),
+                    element=StaticSelectElement(
+                        action_id="meeting_create_meeting_another_time_slot_select",
+                        options=[
+                            Option(
+                                value=t.time_slot_id,
+                                text=f"{t.start_time.astimezone(t.timezone).strftime('%-I:%M%p')} - {t.end_time.astimezone(t.timezone).strftime('%-I:%M%p')} ({tz_to_abbr(t.timezone)})\n"
+                            )
+                            for t in time_slot_infos[2:]
+                        ]
+                    )
+                ),
+            )
+        super().__init__(
+            type="modal",
+            title=PlainTextObject(text="Meeting Time"),
+            close=PlainTextObject(text="Back"),
+            submit=PlainTextObject(text="Confirm"),
+            callback_id="meeting_create_meeting_suggest_time_submit",
+            blocks=blocks,
+        )
+
+    @staticmethod
+    def render_users_list(uids: List[str]) -> str:
+        if not uids:
+            return ""
+
+        return ", ".join([f"<@{uid}>" for uid in uids])
