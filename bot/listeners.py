@@ -1,22 +1,20 @@
-import copy
 import datetime
 import re
 from typing import Callable, NoReturn
 
-import slack_sdk
+import pytz
 from pytz import timezone
 from slack_bolt import App
 from slack_sdk.errors import SlackApiError
-from peewee import Database
-from models import set_personal_profiles_modal, home_modal, create_meeting_modal, action_time
-from db.utils import create_user
-from slack_sdk.models.attachments import Attachment, BlockAttachment
-from slack_sdk.models.blocks import ContextBlock, MarkdownTextObject, ImageBlock, PlainTextObject, ImageElement, \
-    DividerBlock, ActionsBlock, ButtonElement
+from slack_sdk.models.blocks import DividerBlock
 
-from views import MeetingParticipantView, MeetingParticipantSummaryView, TestMessage, MeetingParticipantActionView, \
-    CreateMeetingView
+from db.models import User, UserProfile, TimeSlot
+from models import set_personal_profiles_modal, create_meeting_modal, action_time, TimeSlotInfo
 from runtime import SlackBotRuntime
+from views.home import HomeView, HomeEditAvailabilityModal
+from views.meeting import CreateMeetingModal, MeetingParticipantView, MeetingParticipantSummaryView, \
+    MeetingParticipantActionView, CreateMeetingTimeSuggestionModal
+from views.users import SetProfileModal, NewUserMessage
 
 ListenerRegister = Callable[[App, SlackBotRuntime], NoReturn]
 
@@ -33,9 +31,9 @@ def listen_events(app: App, runtime: SlackBotRuntime):
         text = f"Welcome to the team, <@{user_id}>! 🎉 boba tea is on you next time!"
         say(text=text, channel="#general")
 
-    @app.event("message")
-    def handle_message_events(body, logger):
-        logger.info(body)
+    # @app.event("message")
+    # def handle_message_events(body, logger):
+    #     logger.info(body)
 
     @app.event("app_home_opened")
     def home_opened(event, client, logger):
@@ -43,10 +41,10 @@ def listen_events(app: App, runtime: SlackBotRuntime):
 
         try:
             # Call the views.publish method using the WebClient passed to listeners
-            print("home start")
+            logger.debug("home start")
             result = client.views_publish(
                 user_id=user_id,
-                view=home_modal()
+                view=HomeView()
             )
             logger.info(result)
 
@@ -117,23 +115,114 @@ def listen_shortcuts(app: App, runtime: SlackBotRuntime):
         client.views_open(
             trigger_id=shortcut["trigger_id"],
             # A simple view payload for a modal
-            view=CreateMeetingView()
+            view=CreateMeetingModal()
         )
 
 
 def listen_commands(app: App, runtime: SlackBotRuntime):
-    @app.command("/come")
-    def example_come(ack, client: slack_sdk.web.client.WebClient, command, body, say, logger):
-        ack()
-        print(logger)
-        print(body)
-        print(command)
-        channel_id = command["channel_id"]
-        # client.conversations_join(channel=channel_id)
-        # say(text=f"What's up?", channel=channel_id)
+    pass
 
 
 def listen_actions(app: App, runtime: SlackBotRuntime):
+    @app.action("meeting_create_meeting_suggestion_push")
+    def meeting_create_meeting_suggestion_push(ack, body, client, logger):
+        ack()
+
+        client.views_push(
+            trigger_id=body["trigger_id"],
+            view=CreateMeetingTimeSuggestionModal(
+                time_slot_infos=[
+                    TimeSlotInfo(
+                        time_slot_id="test1",
+                        start_time=datetime.datetime.now(timezone("UTC")),
+                        end_time=datetime.datetime.now(timezone("UTC")) + datetime.timedelta(hours=1),
+                        timezone=pytz.timezone("America/Los_Angeles"),
+                        available_users=[],
+                        tentative_users=[],
+                        unavailable_users=[],
+                    ),
+                    TimeSlotInfo(
+                        time_slot_id="test2",
+                        start_time=datetime.datetime.now(timezone("UTC")),
+                        end_time=datetime.datetime.now(timezone("UTC")) + datetime.timedelta(hours=1),
+                        timezone=pytz.timezone("America/Los_Angeles"),
+                        available_users=[],
+                        tentative_users=[],
+                        unavailable_users=[],
+                    ),
+                    TimeSlotInfo(
+                        time_slot_id="test3",
+                        start_time=datetime.datetime.now(timezone("UTC")),
+                        end_time=datetime.datetime.now(timezone("UTC")) + datetime.timedelta(hours=1),
+                        timezone=pytz.timezone("America/Los_Angeles"),
+                        available_users=[],
+                        tentative_users=[],
+                        unavailable_users=[],
+                    ),
+                    TimeSlotInfo(
+                        time_slot_id="test4",
+                        start_time=datetime.datetime.now(timezone("UTC")),
+                        end_time=datetime.datetime.now(timezone("UTC")) + datetime.timedelta(hours=1),
+                        timezone=pytz.timezone("America/Los_Angeles"),
+                        available_users=[],
+                        tentative_users=[],
+                        unavailable_users=[],
+                    ),
+                    TimeSlotInfo(
+                        time_slot_id="test5",
+                        start_time=datetime.datetime.now(timezone("UTC")),
+                        end_time=datetime.datetime.now(timezone("UTC")) + datetime.timedelta(hours=1),
+                        timezone=pytz.timezone("America/Los_Angeles"),
+                        available_users=[],
+                        tentative_users=[],
+                        unavailable_users=[],
+                    ),
+                    TimeSlotInfo(
+                        time_slot_id="test6",
+                        start_time=datetime.datetime.now(timezone("UTC")),
+                        end_time=datetime.datetime.now(timezone("UTC")) + datetime.timedelta(hours=1),
+                        timezone=pytz.timezone("America/Los_Angeles"),
+                        available_users=[],
+                        tentative_users=[],
+                        unavailable_users=[],
+                    ),
+                ]
+            )
+        )
+
+    @app.action("home_header_schedule_meeting")
+    def home_header_schedule_meeting(ack, body, client, logger):
+        ack()
+
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=CreateMeetingModal(
+            ),
+        )
+
+    @app.action("home_dropdown_menu_select")
+    def handle_some_action(ack, body, client, logger):
+        ack()
+
+        user = User.get_or_none(slack_uid=body["user"]["id"])
+        if not user:
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view=SetProfileModal(),
+            )
+        else:
+            profile: UserProfile = UserProfile.get(user=user)
+            client.views_open(
+                trigger_id=body["trigger_id"],
+                view=SetProfileModal(
+                    start_time=profile.working_hours_start,
+                    end_time=profile.working_hours_end,
+                    working_days_magics=profile.to_magics(),
+                    timezone=profile.timezone,
+                    update=True,
+                ),
+            )
+
     @app.action(re.compile("(\d+)\.actionId-3"))
     def close_available_time(ack, action, body, client, logger):
         ack()
@@ -274,8 +363,70 @@ def listen_actions(app: App, runtime: SlackBotRuntime):
         say(
         )
 
+    @app.action("home_edit_availability_but_clicked")
+    def home_edit_availability(ack, client, body, logger):
+        ack()
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=HomeEditAvailabilityModal()
+        )
+
 
 def listen_views(app: App, runtime: SlackBotRuntime):
+    @app.action("users_set_profile_start_time_select")
+    @app.action("users_set_profile_end_time_select")
+    def noop(ack):
+        ack()
+
+    @app.view("meeting_create_meeting_suggest_time_submit")
+    def meeting_create_meeting_suggest_time_submit(ack, client, body, ):
+        ack()
+
+        # Should store a timeslot
+        print(body)
+
+    @app.view("meeting_create_meeting_submit")
+    def meeting_create_meeting_submit(ack, client, body, ):
+        ack()
+
+        values = body["view"]["state"]["values"]
+
+        title = None
+        convs = []
+        duration = None
+        frequency = None
+        date = None
+        agenda = None
+        for block_name, block in values.items():
+            for action_name, action in block.items():
+                if action_name == "meeting_create_meeting_title":
+                    title = action["value"]
+                    pass
+                elif action_name == 'meeting_create_meeting_participants':
+                    for conv in action['selected_conversations']:
+                        convs.append(conv)
+                elif action_name == 'meeting_create_meeting_duration':
+                    duration = action['selected_option']['value']
+                elif action_name == 'meeting_create_meeting_frequency':
+                    frequency = action['selected_option']['value']
+                elif action_name == 'meeting_create_meeting_date':
+                    date = action['selected_date']
+                elif action_name == 'meeting_create_meeting_agenda':
+                    agenda = action['value']
+
+        # Filter the convs list as there might be channels or apps
+        # for uid in convs:
+        #     if uid.startswith("C"):
+        #         client.conversations_info(channel=uid)
+
+        # with runtime.db.atomic() as transaction:
+        #     for user_or_chan in convs:
+        #         pass
+        client.views_push(
+            trigger_id=body["trigger_id"],
+            view=CreateMeetingTimeSuggestionModal()
+        )
+
     @app.view("personal_profile")
     def personal_profile(ack, body, client, view, logger):
         values = view["state"]["values"]
@@ -311,3 +462,154 @@ def listen_views(app: App, runtime: SlackBotRuntime):
     #     else:
     #         ack()
     #         # TODO: save meeting to db
+
+
+def listen_user_flow(app: App, runtime: SlackBotRuntime):
+    """
+    Message new user with a button to create profile
+    """
+
+    @app.message("new")
+    def new_user(message, say):
+        user = message['user']
+
+        msg = NewUserMessage(user)
+        say(
+            text="",
+            blocks=msg.blocks,
+        )
+
+    """
+    Open page for new user profile
+    """
+
+    @app.action("new_user_msg_set_profile")
+    def new_user_msg_set_profile(ack, action, body, client, logger, say):
+        ack()
+
+        user = User.get_or_none(slack_uid=body["user"]["id"])
+        if user:
+            say(
+                text=f"Dada <@{body['user']['id']}>, you have already set up your profile!"
+            )
+            return
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=SetProfileModal(),
+        )
+
+    """
+    Set new user profile submitted (create/update)
+    """
+
+    @app.view("user_set_profile_submitted")
+    def user_set_profile_submitted(ack, client, body, logger):
+        ack()
+
+        uid = body.get("user").get("id")
+
+        values = body["view"]["state"]["values"]
+
+        # Parse the response, which is hideous :)
+        tz = None
+        start_time = None
+        end_time = None
+        working_days = []
+        for block_name, block in values.items():
+            for action_name, elem in block.items():
+                if action_name == 'users_set_profile_timezone_select':
+                    tz = elem["selected_option"]['value']
+                elif action_name == 'users_set_profile_working_days_multi_select':
+                    for option in elem["selected_options"]:
+                        working_days.append(option["value"])
+                elif action_name == 'users_set_profile_start_time_select':
+                    start_time = datetime.datetime.strptime(elem['selected_time'], "%H:%M")
+                elif action_name == 'users_set_profile_end_time_select':
+                    end_time = datetime.datetime.strptime(elem['selected_time'], "%H:%M")
+
+        # Create user if not
+        user = User.get_or_none(slack_uid=uid)
+        if not user:
+            with runtime.db.atomic() as xaction:
+                try:
+                    user = User.create(
+                        slack_uid=uid
+                    )
+                    user_profile = UserProfile(
+                        user=user,
+                        timezone=tz,
+                        working_hours_start=start_time,
+                        working_hours_end=end_time,
+                    )
+
+                    user_profile.update_workdays(*working_days)
+                    user_profile.save()
+                except Exception:
+                    xaction.rollback()
+                    raise RuntimeError("Fail in creation user and user profiles")
+
+    """
+    Open edit availability modal
+    """
+
+    @app.action("home_edit_availability_but_clicked")
+    def home_edit_availability(ack, client, body, logger):
+        ack()
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view=HomeEditAvailabilityModal()
+        )
+
+    """
+    Switch weekdays
+    """
+
+    @app.action("user_edit_availability_weekday_selected")
+    def user_edit_availability_weekday_selected(ack, client, action, body, logger):
+        ack()
+
+        client.views_update(
+            view_id=body["view"]["id"],
+            view=HomeEditAvailabilityModal(
+                selected_weekday_magic=action["selected_option"]["value"]
+            )
+        )
+
+    @app.action("user_edit_availability_add_time_clicked")
+    def user_edit_availability_add_time_clicked(ack, client, action, body, logger):
+        ack(response_action="errors", errors=Exception())
+
+    """
+    Update availability (submission)
+    """
+
+    @app.action("user_edit_availability_update_time_clicked")
+    def user_edit_availability_update_time_clicked(ack, client, action, body, logger):
+        ack()
+
+        uid = body["user"]["id"]
+        user = User.get(slack_uid=uid)
+        user_tz = timezone(user.profile.get().timezone)
+
+        state = body["view"]["state"]["values"]
+
+        start = None
+        end = None
+        status = None
+        for block_name, block in state.items():
+            for action_name, act in block.items():
+                if action_name == 'user_edit_availability_available_time_start':
+                    start = act['selected_time']
+                elif action_name == 'user_edit_availability_available_time_start':
+                    end = act['selected_time']
+                elif action_name == 'user_edit_availability_available_time_status':
+                    status = act['selected_option']
+
+        if start and end and status:
+            TimeSlot.create(
+                user=user,
+                type="availability",
+                start=user_tz.localize(datetime.datetime.strptime(start, "%-I:%M%p")).astimezone(timezone('UTC')),
+                end=user_tz.localize(datetime.datetime.strptime(end, "%-I:%M%p")).astimezone(timezone('UTC')),
+                status_label=status.lower(),
+            )

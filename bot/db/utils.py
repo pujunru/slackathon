@@ -4,9 +4,12 @@ from db.database import use_database
 
 
 def init_db_if_not(db: Database):
+    use_database(db)
     if not db.table_exists(User):
         db.create_tables(
-            [User, UserProfile, WeekDays, TimeSlot]
+            [
+                User, UserProfile, WeekDays, TimeSlot
+            ]
         )
 
 
