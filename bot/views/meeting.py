@@ -275,7 +275,7 @@ class CreateMeetingTimeSuggestionModal(View):
                                 # f"{self.render_users_list(t.available_users)}\n"
                                      f"Tentative: {len(t.tentative_users)} users \n"
                                 # f"{self.render_users_list(t.tentative_users)}\n"
-                                #      f"Unavailable: {len(t.unavailable_users)} users"
+                                     f"Unavailable: {len(t.unavailable_users)} users"
                                 # f"{self.render_users_list(t.unavailable_users)}\n"
                             )
                         )
@@ -297,6 +297,7 @@ class CreateMeetingTimeSuggestionModal(View):
                         options=[
                             Option(
                                 value=t.time_slot_id,
+                                # text= " test"
                                 text=f"{t.start_time.astimezone(t.timezone).strftime('%-I:%M%p')} - {t.end_time.astimezone(t.timezone).strftime('%-I:%M%p')} ({tz_to_abbr(t.timezone)})\n"
                             )
                             for t in time_slot_infos[2:]

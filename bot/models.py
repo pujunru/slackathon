@@ -1,11 +1,10 @@
 import datetime
 from dataclasses import dataclass
 from typing import Union, Optional, Sequence, List
-
 from datetime import tzinfo
 
 from pytz import BaseTzInfo
-from slack_sdk.models.blocks import PlainTextObject, Block
+from slack_sdk.models.blocks import PlainTextObject, Block, ButtonElement, ActionsBlock
 from slack_sdk.models.views import View
 
 from db.models import User
@@ -239,14 +238,37 @@ def set_personal_profiles_modal(counter=1):
             inputs("working_days", checkbox(options=[option(week[i], str(i)) for i in range(7)]), "Working Days"),
             inputs("working_hours_start", select_time(), "Working Hours"),
             inputs("working_hours_end", select_time(), "-"),
-            context("Availability"),
-            context("From  -  To  -  Status")
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Availability*\nFrom  -  To  -  Status"
+                }
+            },
+            action_time(0),
+            actions(elements=[
+                button(t="Add a time", action_id="add_available_time", value="add_available_time")]),
+
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " "
+                },
+                "accessory": {
+                    "type": "button",
+                    # "style": "primary",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Update",
+                        "emoji": True
+                    },
+                    "value": "click_me_123",
+                    "action_id": "75.actionId-2"
+                }
+            }
         ]
     }
-    for i in range(counter):
-        result["blocks"].append(action_time(i))
-    result["blocks"].append(actions(elements=[
-        button(t="Add a time", action_id="add_available_time", value="add_available_time")]))
     return result
 
 
@@ -369,8 +391,594 @@ def home_modal():
                         }
                     ],
                     "action_id": "9.actionId-2"
-                },
-                button("submit", "10.actionId-2", "submit")
+                },ButtonElement(
+                    text="submit",
+                    style="primary",
+                    action_id="10.actionId-2",
+                )
             ])
         ]
     }
+
+
+def hardcode_available():
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": ":white_check_mark:*Available*"
+        }
+    },{
+        "type": "actions",
+        "block_id": f"11.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "10:00a.m. - 10:30a.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"12.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "10:30a.m. - 11:00a.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"13.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "11:00a.m. - 11:30a.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"14.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "11:30a.m. - 12:00p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"15.actionId-2"
+            }
+        ]
+    },
+    {
+        "type": "actions",
+        "block_id": f"24.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "12:00p.m. - 12:30p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"16.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "12:30p.m. - 01:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"17.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "02:00p.m. - 02:30p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"18.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "02:30p.m. - 03:00p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"19.actionId-2"
+            }
+        ]
+    },
+    {
+        "type": "actions",
+        "block_id": f"25.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "03:00p.m. - 03:30p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"20.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "03:30p.m. - 04:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"21.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "04:30p.m. - 05:00p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"22.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "05:30p.m. - 06:00p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"23.actionId-2"
+            }
+
+        ]
+    }]
+
+
+def hardcode_tentative():
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": ":thinking_face:*Tentative*"
+        }
+    },{
+        "type": "actions",
+        "block_id": f"30.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "01:00p.m. - 01:30.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"31.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "01:30p.m. - 02:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"32.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "05:00p.m. - 05:30p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"33.actionId-2"
+            }
+        ]
+    }]
+
+
+def hardcode_unavailable():
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": ":x:*Unavailable*"
+        }
+    },{
+        "type": "actions",
+        "block_id": f"40.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "11:30a.m. - 12:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"41.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "04:00p.m. - 04:30p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"42.actionId-2"
+            }]
+    }]
+
+
+def hardcode():
+    return[*hardcode_available(),
+    *hardcode_tentative(),
+    *hardcode_unavailable()]
+
+
+def hardcode_available_after():
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": ":white_check_mark:*Available*"
+        }
+    },{
+        "type": "actions",
+        "block_id": f"11.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "10:00a.m. - 10:30a.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"12.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "10:30a.m. - 11:00a.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"13.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "11:00a.m. - 11:30a.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"14.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "11:30a.m. - 12:00p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"15.actionId-2"
+            }
+        ]
+    },
+        {
+            "type": "actions",
+            "block_id": f"24.actionId-2",
+            "elements": [
+
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "02:00p.m. - 02:30p.m.",
+                        "emoji": True
+                    },
+                    "value":  " ",
+                    "action_id": f"18.actionId-2"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "02:30p.m. - 03:00p.m.",
+                        "emoji": True
+                    },
+                    "value":  " ",
+                    "action_id": f"19.actionId-2"
+                }
+            ]
+        },
+        {
+            "type": "actions",
+            "block_id": f"25.actionId-2",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "03:00p.m. - 03:30p.m.",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"20.actionId-2"
+                },
+
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "04:30p.m. - 05:00p.m.",
+                        "emoji": True
+                    },
+                    "value":  " ",
+                    "action_id": f"22.actionId-2"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "05:30p.m. - 06:00p.m.",
+                        "emoji": True
+                    },
+                    "value":  " ",
+                    "action_id": f"23.actionId-2"
+                }
+
+            ]
+        }]
+
+
+def hardcode_tentative_after():
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": ":thinking_face:*Tentative*"
+        }
+    },{
+        "type": "actions",
+        "block_id": f"30.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "01:00p.m. - 01:30.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"31.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "01:30p.m. - 02:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"32.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "03:30p.m. - 04:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"21.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "05:00p.m. - 05:30p.m.",
+                    "emoji": True
+                },
+                "value":  " ",
+                "action_id": f"33.actionId-2"
+            }
+        ]
+    }]
+
+
+def hardcode_unavailable_after():
+    return [{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": ":x:*Unavailable*"
+        }
+    },{
+        "type": "actions",
+        "block_id": f"40.actionId-2",
+        "elements": [
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "11:30a.m. - 12:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"41.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "12:00p.m. - 12:30p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"16.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "12:30p.m. - 01:00p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"17.actionId-2"
+            },
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "04:00p.m. - 04:30p.m.",
+                    "emoji": True
+                },
+                "value": " ",
+                "action_id": f"42.actionId-2"
+            }]
+    }]
+
+
+def hardcode_after():
+    return[*hardcode_available_after(),
+           *hardcode_tentative_after(),
+           *hardcode_unavailable_after()]
+
+
+def hardcode_meeting():
+    return [{
+            "type": "divider"
+        },{
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": "*Weekly Sync*"
+        }},context("11:30AM - 12:00PM"),
+        context("02/04/2022"),{
+            "type": "actions",
+            "block_id": f"54.actionId-2",
+            "elements": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Yes",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"53.actionId-2"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Maybe",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"52.actionId-2"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "No",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"51.actionId-2"
+                }]},{
+            "type": "divider"
+        }
+    ]
+
+def hardcode_message_meeting(user):
+    return {"blocks":[
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<@{user}> scheduled a meeting\n"
+                        f"\tMonday, February 8, 2022\n"
+                        f"\tTeam check-in for *Weekly Sync*\n"
+                        f"\t10:30AM - 11:00AM (Pacific Time - Los Angeles"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "\t*Going?*"
+            }
+        },{
+            "type": "actions",
+            "block_id": f"54.actionId-2",
+            "elements": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Yes",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"63.actionId-2"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Maybe",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"62.actionId-2"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "No",
+                        "emoji": True
+                    },
+                    "value": " ",
+                    "action_id": f"61.actionId-2"
+                }]},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "\t*Status*"
+            }
+        },
+        context("\t:white_check_mark: Confirm: @Jiazhen Zhao\n\t:x: Not coming:\n\t:question: Maybe: @Adam\n\t:grey_question: Waiting for response: @Mandy, @Alan, @Doris")
+    ]}

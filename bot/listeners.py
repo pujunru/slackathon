@@ -6,10 +6,10 @@ import pytz
 from pytz import timezone
 from slack_bolt import App
 from slack_sdk.errors import SlackApiError
-from slack_sdk.models.blocks import DividerBlock
+from slack_sdk.models.blocks import DividerBlock, ButtonElement
 
 from db.models import User, UserProfile, TimeSlot
-from models import set_personal_profiles_modal, create_meeting_modal, action_time, TimeSlotInfo
+from models import set_personal_profiles_modal, create_meeting_modal, action_time, TimeSlotInfo, button, actions, hardcode_message_meeting
 from runtime import SlackBotRuntime
 from views.home import HomeView, HomeEditAvailabilityModal
 from views.meeting import CreateMeetingModal, MeetingParticipantView, MeetingParticipantSummaryView, \
@@ -25,18 +25,9 @@ def listen_events(app: App, runtime: SlackBotRuntime):
         pong_msg = event["challenge"]
         say(pong_msg)
 
-    @app.event("team_join")
-    def example_team_joined(event, say):
-        user_id = event["user"]
-        text = f"Welcome to the team, <@{user_id}>! 🎉 boba tea is on you next time!"
-        say(text=text, channel="#general")
-
-    # @app.event("message")
-    # def handle_message_events(body, logger):
-    #     logger.info(body)
 
     @app.event("app_home_opened")
-    def home_opened(event, client, logger):
+    def home_opened(event, say, client, logger):
         user_id = event["user"]
 
         try:
@@ -51,12 +42,87 @@ def listen_events(app: App, runtime: SlackBotRuntime):
         except SlackApiError as e:
             logger.error("Error fetching home page")
 
+        # say({
+        #     "blocks": [
+        #         {
+        #             "type": "divider"
+        #         },
+        #         {
+        #             "type": "section",
+        #             "text": {
+        #                 "type": "mrkdwn",
+        #                 "text": f":wave:*Hi <@{user_id}>, you have added AlignUp into this workspace!*\nYour default working hours is\n\t*Working Hours:* 10:AM - 6:00PM\n\t*Working Days:* Monday - Friday\n\t*Timezone:* (GMT-8:00) Pacific Time - Los Angeles"
+        #             }
+        #         }, actions([button(t="Update my availability", action_id="set_personal_profiles", value="set_personal_profiles"),])
+        #     ]
+        # })
+
+    @app.event("team_join")
+    def team_join(event, say, client, logger):
+        user_id = event["user"]
+        say({
+            "blocks": [
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":wave:*Hi <@{user_id}>, you have added AlignUp into this workspace!*\nYour default working hours is\n\t*Working Hours:* 10:AM - 6:00PM\n\t*Working Days:* Monday - Friday\n\t*Timezone:* (GMT-8:00) Pacific Time - Los Angeles"
+                    }
+                }, actions([button(t="Update my availability", action_id="set_personal_profiles", value="set_personal_profiles"),])
+            ]
+        })
+
 
 def listen_messages(app: App, runtime: SlackBotRuntime):
     @app.message(":wave:")
     def example_wave_back(message, say):
         user = message['user']
         say(text=f"Hola, <@{user}>!")
+
+    @app.message("app install")
+    def app_install(message, say):
+        user_id = message['user']
+        say({
+            "blocks": [
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":wave:*Hi <@{user_id}>, you have added AlignUp into this workspace!*\nYour default working hours is\n\t*Working Hours:* 10:AM - 6:00PM\n\t*Working Days:* Monday - Friday\n\t*Timezone:* (GMT-8:00) Pacific Time - Los Angeles"
+                    }
+                }, actions([button(t="Update my availability", action_id="set_personal_profiles", value="set_personal_profiles"),])
+            ]
+        })
+
+    @app.message("update")
+    def app_install(message, say):
+        user_id = message['user']
+        say({
+            "blocks": [
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":wave:Good Afternoon <@{user_id}>! It is almost the end of the week. Before you wrap up this week's work, don't forget to update you schedule for next week."
+                                f"The will let your team members know the most up-to-date information about when you will be available next week."
+                    }
+                }, actions([button(t="Update my availability", action_id="set_personal_profiles", value="set_personal_profiles"),])
+            ]
+        })
+
+    @app.message("meeting")
+    def app_install(message, say):
+        user_id = message['user']
+        say(hardcode_message_meeting(user_id))
 
     @app.message("test!")
     def test_view(message, say, client):
@@ -124,6 +190,16 @@ def listen_commands(app: App, runtime: SlackBotRuntime):
 
 
 def listen_actions(app: App, runtime: SlackBotRuntime):
+    @app.action("meeting_create_meeting_duration")
+    def handle_some_action(ack, body, logger):
+        ack()
+        logger.info(body)
+
+    @app.action("meeting_create_meeting_frequency")
+    def handle_some_action(ack, body, logger):
+        ack()
+        logger.info(body)
+
     @app.action("meeting_create_meeting_suggestion_push")
     def meeting_create_meeting_suggestion_push(ack, body, client, logger):
         ack()
@@ -297,50 +373,36 @@ def listen_actions(app: App, runtime: SlackBotRuntime):
             except SlackApiError as e:
                 logger.error("Error setting profile: {}".format(e))
 
-    # @app.action("update_availability")
-    # def update_availability(ack, action, body, client, logger):
+
+
+    # @app.action("new_meeting")
+    # def new_meeting(ack, action, body, client, logger):
     #     ack()
-    #     print(body)
-    #     if body["type"] == "block_actions":
-    #         view = update_availability_modal()
-    #         try:
-    #             result = client.views_open(
-    #                 trigger_id=body["trigger_id"],
-    #                 view=view
-    #             )
-    #             logger.info(result)
+    #     view = create_meeting_modal(body["user"]["username"], [" "])
+    #     try:
+    #         result = client.views_open(
+    #             trigger_id=body["trigger_id"],
+    #             view=view
+    #         )
+    #         logger.info(result)
     #
-    #         except SlackApiError as e:
-    #             logger.error("Error setting profile: {}".format(e))
-
-    @app.action("new_meeting")
-    def new_meeting(ack, action, body, client, logger):
-        ack()
-        view = create_meeting_modal(body["user"]["username"], [" "])
-        try:
-            result = client.views_open(
-                trigger_id=body["trigger_id"],
-                view=view
-            )
-            logger.info(result)
-
-        except SlackApiError as e:
-            logger.error("Error setting profile: {}".format(e))
-
-    # TODO: view_update for add_time, view_update for erase time, view; db parts for meeting and update_avail
-    @app.action("test")
-    def test(ack, action, body, client, logger):
-        ack(response_action="update", view=create_meeting_modal(body["user"]["username"], [" "], "Create"))
-        # view = create_meeting_modal(body["user"]["username"], [" "])
-        # try:
-        #     result = client.views_open(
-        #         trigger_id=body["trigger_id"],
-        #         view=view
-        #     )
-        #     logger.info(result)
-        #
-        # except SlackApiError as e:
-        #     logger.error("Error setting profile: {}".format(e))
+    #     except SlackApiError as e:
+    #         logger.error("Error setting profile: {}".format(e))
+    #
+    # # TODO: view_update for add_time, view_update for erase time, view; db parts for meeting and update_avail
+    # @app.action("test")
+    # def test(ack, action, body, client, logger):
+    #     ack(response_action="update", view=create_meeting_modal(body["user"]["username"], [" "], "Create"))
+    #     # view = create_meeting_modal(body["user"]["username"], [" "])
+    #     # try:
+    #     #     result = client.views_open(
+    #     #         trigger_id=body["trigger_id"],
+    #     #         view=view
+    #     #     )
+    #     #     logger.info(result)
+    #     #
+    #     # except SlackApiError as e:
+    #     #     logger.error("Error setting profile: {}".format(e))
 
     @app.action(re.compile("meeting_part.*"))
     @app.action("hnrB")
@@ -445,6 +507,18 @@ def listen_views(app: App, runtime: SlackBotRuntime):
         ack()
 
         user = body["user"]["id"]
+
+        view = HomeView(False)
+        try:
+            result = client.views_update(
+                external_id="home",
+                # token=body["token"],
+                view=view
+            )
+            logger.info(result)
+
+        except SlackApiError as e:
+            logger.error("Error updating home: {}".format(e))
         # return create_user(runtime.db, user, working_hours_start, working_hours_end, work_days, timezone, logger)
 
     # @app.view("create_meeting")

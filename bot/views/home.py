@@ -5,19 +5,34 @@ from slack_sdk.models.blocks import *
 from slack_sdk.models.views import View
 
 from views.commons import Blocks, WeekdayOptionsMixin
-
+from models import button, inputs, static_select, option, hardcode, hardcode_after, hardcode_meeting
 
 class HomeMyAvailabilityView(Blocks):
     def __init__(self, filter_availability_result: Blocks = None):
+        timezones = [f"UTC{i}" for i in range(-12, 0)] + ["UTC"] + [f"UTC+{i}" for i in range(1, 13)]
         _blocks = [
             HeaderBlock(text=PlainTextObject(text="My availability")),
-            SectionBlock(
-                text=PlainTextObject(text="<placeholder>"),
-                accessory=ButtonElement(
-                    text=PlainTextObject(text="Edit your availability"),
-                    action_id="home_edit_availability_but_clicked"
-                )
-            ),
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " "
+                },
+                "accessory":
+                    ButtonElement(
+                    text="Update my availability",
+                    style="primary",
+                    action_id="set_personal_profiles",
+                ),
+            },
+            inputs("timezone", static_select("timezone_1", options=[option(timezones[i], str(i)) for i in range(25)]), "Timezone"),
+            # SectionBlock(
+            #     text=PlainTextObject(text="<placeholder>"),
+            #     accessory=ButtonElement(
+            #         text=PlainTextObject(text="Edit your availability"),
+            #         action_id="home_edit_availability_but_clicked"
+            #     )
+            # ),
             ActionsBlock(
                 elements=[
                     DatePickerElement(
@@ -30,8 +45,11 @@ class HomeMyAvailabilityView(Blocks):
                             Option(value="Tentative", text="Tentative"),
                             Option(value="Unavailable", text="Unavailable"),
                         ]
-                    ),
-                    ButtonElement(text="Filter", style="primary"),
+                    ),ButtonElement(
+                        text="Submit",
+                        style="primary",
+                        action_id="10.actionId-2",
+                    )
                 ]
             ),
         ]
@@ -107,8 +125,10 @@ class HomeEditAvailabilityModal(View, WeekdayOptionsMixin):
 
 
 class HomeView(View):
-    def __init__(self):
+    def __init__(self, before=True):
+        tmp = hardcode() if before else hardcode_after()
         super().__init__(
+            external_id="home",
             type="home",
             callback_id="home",
             blocks=[
@@ -142,7 +162,9 @@ class HomeView(View):
                 HeaderBlock(
                     text=PlainTextObject(text="Upcoming meetings"),
                 ),
+                *hardcode_meeting(),
                 DividerBlock(),
                 *HomeMyAvailabilityView(),
+                *tmp
             ]
         )
