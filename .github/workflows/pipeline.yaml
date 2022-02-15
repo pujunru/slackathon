@@ -68,6 +68,43 @@ jobs:
             --stack-name $(echo ${FEATURE_BRANCH_NAME##*/} | tr -cd '[a-zA-Z0-9-]') \
             --region ${TESTING_REGION} \
             --no-prompts
+            
+  delete-all:
+    if: startsWith(github.event.ref, 'dev') && github.event_name == 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: aws-actions/setup-sam@v1
+
+      - name: Assume the testing pipeline user role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ env.PIPELINE_USER_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.PIPELINE_USER_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.TESTING_REGION }}
+          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          role-session-name: testing-packaging
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+          
+      - name: Delete testing branch stack
+        env:
+          FEATURE_BRANCH_NAME: ${{ github.event.ref }}
+        run: |
+          sam delete \
+            --stack-name ${TESTING_STACK_NAME} \
+            --region ${TESTING_REGION} \
+            --no-prompts
+            
+      - name: Delete prod branch stack
+        env:
+          FEATURE_BRANCH_NAME: ${{ github.event.ref }}
+        run: |
+          sam delete \
+            --stack-name ${PROD_STACK_NAME} \
+            --region ${TESTING_REGION} \
+            --no-prompts
 
   build-and-deploy-feature:
     # this stage is triggered only for feature branches (feature*),
@@ -104,6 +141,8 @@ jobs:
             --parameter-overrides DbHostname=${{ secrets.DB_HOSTNAME }} DbPassword=${{ secrets.DB_PASSWORD }} \
             DbName=${{ secrets.DB_NAME }} DbUsername=${{ secrets.DB_USERNAME }} \
             SlackBotToken=${{ secrets.SLACK_BOT_TOKEN }} SlackSigningSecret=${{ secrets.SLACK_SIGNING_SECRET }}
+  
+  
             
 
   build-and-package:
